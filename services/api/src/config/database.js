@@ -2,7 +2,7 @@ const { Pool } = require('pg');
 
 const pool = new Pool({
   host: process.env.DB_HOST || 'postgres',
-  port: parseInt(process.env.DB_PORT, 10) || 5433,
+  port: parseInt(process.env.DB_PORT, 10) || 5499,
   database: process.env.DB_NAME || 'ecommerce_chat',
   user: process.env.DB_USER || 'ecommerce_user',
   password: process.env.DB_PASSWORD || 'ecommerce_secure_pass_2024',
