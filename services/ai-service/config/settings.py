@@ -83,7 +83,7 @@ ASGI_APPLICATION = "config.asgi.application"
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql://ecommerce_user:ecommerce_pass@postgres:5433/ecommerce_chat",
+    "postgresql://ecommerce_user:ecommerce_pass@postgres:5499/ecommerce_chat",
 )
 
 DATABASES = {

@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   # =============================================================
-  # PostgreSQL Database (non-default port 5433)
+  # PostgreSQL Database (non-default port 5499)
   # =============================================================
   postgres:
     image: postgres:16-alpine
@@ -11,14 +11,14 @@ services:
       POSTGRES_DB: ecommerce_chat
       POSTGRES_USER: ecommerce_user
       POSTGRES_PASSWORD: ecommerce_secure_pass_2024
-      PGPORT: "5433"
+      PGPORT: "5499"
     ports:
-      - "5433:5433"
+      - "5499:5499"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./services/api/src/config/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ecommerce_user -d ecommerce_chat -p 5433"]
+      test: ["CMD-SHELL", "pg_isready -U ecommerce_user -d ecommerce_chat -p 5499"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -56,7 +56,7 @@ services:
     container_name: ecommerce_ai_service
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings
-      - DATABASE_URL=postgresql://ecommerce_user:ecommerce_secure_pass_2024@postgres:5433/ecommerce_chat
+      - DATABASE_URL=postgresql://ecommerce_user:ecommerce_secure_pass_2024@postgres:5499/ecommerce_chat
       - REDIS_URL=redis://:redis_secure_pass_2024@redis:6380/1
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
@@ -91,7 +91,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3066
-      - DATABASE_URL=postgresql://ecommerce_user:ecommerce_secure_pass_2024@postgres:5433/ecommerce_chat
+      - DATABASE_URL=postgresql://ecommerce_user:ecommerce_secure_pass_2024@postgres:5499/ecommerce_chat
       - REDIS_URL=redis://:redis_secure_pass_2024@redis:6380/0
       - JWT_SECRET=${JWT_SECRET:-ecommerce_jwt_secret_key_2024_production}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-ecommerce_jwt_refresh_secret_2024}
@@ -126,7 +126,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3068
-      - DATABASE_URL=postgresql://ecommerce_user:ecommerce_secure_pass_2024@postgres:5433/ecommerce_chat
+      - DATABASE_URL=postgresql://ecommerce_user:ecommerce_secure_pass_2024@postgres:5499/ecommerce_chat
       - REDIS_URL=redis://:redis_secure_pass_2024@redis:6380/2
       - AI_SERVICE_URL=http://ai-service:3067
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -156,7 +156,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3069
-      - DATABASE_URL=postgresql://ecommerce_user:ecommerce_secure_pass_2024@postgres:5433/ecommerce_chat
+      - DATABASE_URL=postgresql://ecommerce_user:ecommerce_secure_pass_2024@postgres:5499/ecommerce_chat
       - REDIS_URL=redis://:redis_secure_pass_2024@redis:6380/3
       - AI_SERVICE_URL=http://ai-service:3067
       - MCP_SERVER_URL=http://mcp-server:3068
