@@ -13,8 +13,8 @@ const authService = {
       '/auth/login',
       credentials
     );
-    const { token, refreshToken, user } = response.data.data;
-    localStorage.setItem('auth_token', token);
+    const { accessToken, refreshToken } = response.data.data;
+    localStorage.setItem('auth_token', accessToken);
     localStorage.setItem('refresh_token', refreshToken);
     return response.data.data;
   },
@@ -23,13 +23,13 @@ const authService = {
     const response = await api.post<ApiResponse<AuthResponse>>(
       '/auth/register',
       {
-        name: data.name,
+        full_name: data.name,
         email: data.email,
         password: data.password,
       }
     );
-    const { token, refreshToken } = response.data.data;
-    localStorage.setItem('auth_token', token);
+    const { accessToken, refreshToken } = response.data.data;
+    localStorage.setItem('auth_token', accessToken);
     localStorage.setItem('refresh_token', refreshToken);
     return response.data.data;
   },
@@ -51,21 +51,21 @@ const authService = {
       '/auth/refresh',
       { refreshToken }
     );
-    const { token, refreshToken: newRefreshToken } = response.data.data;
-    localStorage.setItem('auth_token', token);
+    const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+    localStorage.setItem('auth_token', accessToken);
     localStorage.setItem('refresh_token', newRefreshToken);
     return response.data.data;
   },
 
   async getProfile(): Promise<User> {
-    const response = await api.get<ApiResponse<User>>('/auth/profile');
+    const response = await api.get<ApiResponse<User>>('/auth/me');
     return response.data.data;
   },
 
   async updateProfile(
     data: Partial<Pick<User, 'name' | 'phone' | 'address' | 'avatar'>>
   ): Promise<User> {
-    const response = await api.put<ApiResponse<User>>('/auth/profile', data);
+    const response = await api.put<ApiResponse<User>>('/auth/me', data);
     return response.data.data;
   },
 

@@ -25,7 +25,7 @@ export default function RegisterPage() {
         password: data.password,
         confirmPassword: data.password,
       });
-      login(response.user, response.token, response.refreshToken);
+      login(response.user, response.accessToken, response.refreshToken);
       navigate('/', { replace: true });
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };

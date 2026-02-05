@@ -19,7 +19,7 @@ export default function LoginPage() {
       setIsLoading(true);
       setError('');
       const response = await authService.login({ email, password });
-      login(response.user, response.token, response.refreshToken);
+      login(response.user, response.accessToken, response.refreshToken);
       navigate(from, { replace: true });
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };

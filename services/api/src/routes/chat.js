@@ -181,6 +181,46 @@ router.get(
 );
 
 // -------------------------------------------------------
+// POST /api/chat/conversations/:id/messages
+// Send a message within a conversation (proxied to AI service)
+// -------------------------------------------------------
+router.post(
+  '/conversations/:id/messages',
+  optionalAuth,
+  chatLimiter,
+  [
+    param('id').isUUID().withMessage('Valid conversation ID is required'),
+    body('content').trim().notEmpty().withMessage('Message content is required').isLength({ max: 5000 }),
+  ],
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(422).json({ success: false, error: 'Validation failed', details: errors.array() });
+      }
+
+      const { id } = req.params;
+      const { content } = req.body;
+      const userId = req.user ? req.user.id : null;
+
+      const result = await chatController.handleMessage({
+        message: content,
+        conversationId: id,
+        userId,
+        user: req.user,
+      });
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// -------------------------------------------------------
 // DELETE /api/chat/conversations/:id
 // Delete a conversation
 // -------------------------------------------------------
