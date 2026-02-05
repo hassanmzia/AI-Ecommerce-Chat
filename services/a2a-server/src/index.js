@@ -25,7 +25,7 @@ const sentimentAgent = require('./agents/sentimentAgent');
 // ─── Configuration ───────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT, 10) || 3069;
 const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://ecommerce_user:ecommerce_secure_pass_2024@localhost:5499/ecommerce_chat';
-const REDIS_URL = process.env.REDIS_URL || 'redis://:redis_secure_pass_2024@localhost:6380/3';
+const REDIS_URL = process.env.REDIS_URL || 'redis://:redis_secure_pass_2024@localhost:6399/3';
 
 // ─── PostgreSQL Connection Pool ──────────────────────────────────
 const db = new Pool({

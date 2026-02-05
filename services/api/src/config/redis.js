@@ -11,7 +11,7 @@ const getRedisClient = () => {
   if (redisClient) return redisClient;
 
   redisClient = createClient({
-    url: `redis://:${process.env.REDIS_PASSWORD || 'redis_secure_pass_2024'}@${process.env.REDIS_HOST || 'redis'}:${process.env.REDIS_PORT || 6380}`,
+    url: `redis://:${process.env.REDIS_PASSWORD || 'redis_secure_pass_2024'}@${process.env.REDIS_HOST || 'redis'}:${process.env.REDIS_PORT || 6399}`,
     socket: {
       reconnectStrategy: (retries) => {
         if (retries > 10) {

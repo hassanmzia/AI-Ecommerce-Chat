@@ -26,7 +26,7 @@ const analyticsTool = require('./tools/analyticsTool');
 // ─── Configuration ───────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT, 10) || 3068;
 const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://ecommerce_user:ecommerce_secure_pass_2024@localhost:5499/ecommerce_chat';
-const REDIS_URL = process.env.REDIS_URL || 'redis://:redis_secure_pass_2024@localhost:6380/2';
+const REDIS_URL = process.env.REDIS_URL || 'redis://:redis_secure_pass_2024@localhost:6399/2';
 
 // ─── PostgreSQL Connection Pool ──────────────────────────────────
 const db = new Pool({
