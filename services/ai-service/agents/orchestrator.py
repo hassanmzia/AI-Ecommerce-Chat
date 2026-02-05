@@ -21,6 +21,12 @@ from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
+
+def _json_safe(obj):
+    """Convert a dict/list containing numpy types to JSON-safe Python types."""
+    return json.loads(json.dumps(obj, default=lambda x: x.item() if hasattr(x, 'item') else str(x)))
+
+
 # ---------------------------------------------------------------------------
 # Delimiter used in system prompts (from notebook)
 # ---------------------------------------------------------------------------
@@ -1019,7 +1025,7 @@ class AgentOrchestrator:
             status="running",
         )
         is_valid, validation_msg, validation_details = self.input_validator.validate(user_message)
-        iv_exec.output_data = {"is_valid": is_valid, "message": validation_msg, "details": validation_details}
+        iv_exec.output_data = _json_safe({"is_valid": is_valid, "message": validation_msg, "details": validation_details})
         iv_exec.status = "completed"
         iv_exec.execution_time_ms = int((time.time() - _iv_start) * 1000)
         iv_exec.save()
@@ -1033,7 +1039,7 @@ class AgentOrchestrator:
                     role="assistant",
                     content=validation_msg,
                     validation_status="flagged",
-                    metadata={"validation_details": validation_details},
+                    metadata=_json_safe({"validation_details": validation_details}),
                 )
             return self._build_response(
                 conversation=conversation,
@@ -1044,7 +1050,7 @@ class AgentOrchestrator:
                 validation_status="flagged",
                 tool_calls=[],
                 start_time=start_time,
-                extra_metadata={"validation_details": validation_details},
+                extra_metadata=_json_safe({"validation_details": validation_details}),
             )
 
         # ---- 3. Sentiment Analysis (parallel insight) ----
@@ -1087,7 +1093,7 @@ class AgentOrchestrator:
             status="running",
         )
         intent = self.intent_detector.detect(user_message, conversation_history)
-        id_exec.output_data = {"intent": intent}
+        id_exec.output_data = _json_safe({"intent": intent})
         id_exec.status = "completed"
         id_exec.execution_time_ms = int((time.time() - _id_start) * 1000)
         id_exec.save()
@@ -1116,7 +1122,7 @@ class AgentOrchestrator:
                 response_text = self._handle_general_query(user_message, conversation_history)
                 agent_type_label = "general"
 
-            agent_exec.output_data = {"response": response_text[:1000], "tool_calls": tool_calls}
+            agent_exec.output_data = _json_safe({"response": response_text[:1000], "tool_calls": tool_calls})
             agent_exec.status = "completed"
             agent_exec.execution_time_ms = int((time.time() - _agent_start) * 1000)
             agent_exec.save()
@@ -1124,7 +1130,7 @@ class AgentOrchestrator:
         except Exception as exc:
             logger.error("Agent execution error for intent '%s': %s", intent, exc)
             agent_exec.status = "failed"
-            agent_exec.output_data = {"error": str(exc)}
+            agent_exec.output_data = _json_safe({"error": str(exc)})
             agent_exec.execution_time_ms = int((time.time() - _agent_start) * 1000)
             agent_exec.save()
             response_text = "I apologize, but I encountered an error processing your request. Please try again or rephrase your question."
@@ -1137,7 +1143,7 @@ class AgentOrchestrator:
             status="running",
         )
         out_valid, out_msg, out_details = self.output_validator.validate(response_text, user_message)
-        ov_exec.output_data = {"is_valid": out_valid, "message": out_msg, "details": out_details}
+        ov_exec.output_data = _json_safe({"is_valid": out_valid, "message": out_msg, "details": out_details})
         ov_exec.status = "completed"
         ov_exec.execution_time_ms = int((time.time() - _ov_start) * 1000)
         ov_exec.save()
@@ -1163,12 +1169,12 @@ class AgentOrchestrator:
                 content=response_text,
                 validation_status=validation_status,
                 tool_calls=tool_calls,
-                metadata={
+                metadata=_json_safe({
                     "intent": intent,
                     "agent_type": agent_type_label,
                     "sentiment": sentiment_result,
                     "output_validation": out_details,
-                },
+                }),
             )
 
         return self._build_response(
@@ -1180,10 +1186,10 @@ class AgentOrchestrator:
             validation_status=validation_status,
             tool_calls=tool_calls,
             start_time=start_time,
-            extra_metadata={
+            extra_metadata=_json_safe({
                 "sentiment": sentiment_result,
                 "output_validation": out_details,
-            },
+            }),
         )
 
     # ------------------------------------------------------------------
