@@ -148,4 +148,4 @@ class AgentExecutionListView(ListAPIView):
             qs = qs.filter(agent_type=agent_type)
         if status_filter:
             qs = qs.filter(status=status_filter)
-        return qs.order_by("-started_at")[:100]
+        return qs.order_by("-created_at")[:100]
