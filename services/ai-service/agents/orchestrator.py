@@ -16,7 +16,6 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from django.conf import settings
-from django.utils import timezone
 
 from openai import OpenAI
 
@@ -1000,6 +999,7 @@ class AgentOrchestrator:
         )
 
         # ---- 2. Input Validation ----
+        _iv_start = time.time()
         iv_exec = AgentExecution.objects.create(
             agent_type="input_validation",
             input_data={"query": user_message},
@@ -1008,7 +1008,7 @@ class AgentOrchestrator:
         is_valid, validation_msg, validation_details = self.input_validator.validate(user_message)
         iv_exec.output_data = {"is_valid": is_valid, "message": validation_msg, "details": validation_details}
         iv_exec.status = "completed"
-        iv_exec.completed_at = timezone.now()
+        iv_exec.execution_time_ms = int((time.time() - _iv_start) * 1000)
         iv_exec.save()
 
         if not is_valid:
@@ -1017,7 +1017,7 @@ class AgentOrchestrator:
                 conversation=conversation,
                 role="assistant",
                 content=validation_msg,
-                validation_status="failed",
+                validation_status="flagged",
                 metadata={"validation_details": validation_details},
             )
             return self._build_response(
@@ -1026,7 +1026,7 @@ class AgentOrchestrator:
                 response_text=validation_msg,
                 agent_type="input_validation",
                 intent="blocked",
-                validation_status="failed",
+                validation_status="flagged",
                 tool_calls=[],
                 start_time=start_time,
                 extra_metadata={"validation_details": validation_details},
@@ -1047,7 +1047,7 @@ class AgentOrchestrator:
                     conversation=conversation,
                     role="assistant",
                     content=escalation_response["response"],
-                    validation_status="passed",
+                    validation_status="valid",
                     metadata={"sentiment": sentiment_result},
                 )
                 return self._build_response(
@@ -1056,13 +1056,14 @@ class AgentOrchestrator:
                     response_text=escalation_response["response"],
                     agent_type="sentiment_analysis",
                     intent="sentiment_escalation",
-                    validation_status="passed",
+                    validation_status="valid",
                     tool_calls=escalation_response.get("tool_calls", []),
                     start_time=start_time,
                     extra_metadata={"sentiment": sentiment_result},
                 )
 
         # ---- 4. Intent Detection ----
+        _id_start = time.time()
         id_exec = AgentExecution.objects.create(
             agent_type="intent_detection",
             input_data={"query": user_message},
@@ -1071,7 +1072,7 @@ class AgentOrchestrator:
         intent = self.intent_detector.detect(user_message, conversation_history)
         id_exec.output_data = {"intent": intent}
         id_exec.status = "completed"
-        id_exec.completed_at = timezone.now()
+        id_exec.execution_time_ms = int((time.time() - _id_start) * 1000)
         id_exec.save()
 
         # ---- 5. Agent Execution ----
@@ -1079,6 +1080,7 @@ class AgentOrchestrator:
         tool_calls: List[Dict] = []
         response_text = ""
 
+        _agent_start = time.time()
         agent_exec = AgentExecution.objects.create(
             agent_type=self._intent_to_agent_type(intent),
             input_data={"query": user_message, "intent": intent},
@@ -1099,18 +1101,19 @@ class AgentOrchestrator:
 
             agent_exec.output_data = {"response": response_text[:1000], "tool_calls": tool_calls}
             agent_exec.status = "completed"
-            agent_exec.completed_at = timezone.now()
+            agent_exec.execution_time_ms = int((time.time() - _agent_start) * 1000)
             agent_exec.save()
 
         except Exception as exc:
             logger.error("Agent execution error for intent '%s': %s", intent, exc)
             agent_exec.status = "failed"
-            agent_exec.error_message = str(exc)
-            agent_exec.completed_at = timezone.now()
+            agent_exec.output_data = {"error": str(exc)}
+            agent_exec.execution_time_ms = int((time.time() - _agent_start) * 1000)
             agent_exec.save()
             response_text = "I apologize, but I encountered an error processing your request. Please try again or rephrase your question."
 
         # ---- 6. Output Validation ----
+        _ov_start = time.time()
         ov_exec = AgentExecution.objects.create(
             agent_type="output_validation",
             input_data={"response": response_text[:500]},
@@ -1119,18 +1122,22 @@ class AgentOrchestrator:
         out_valid, out_msg, out_details = self.output_validator.validate(response_text, user_message)
         ov_exec.output_data = {"is_valid": out_valid, "message": out_msg, "details": out_details}
         ov_exec.status = "completed"
-        ov_exec.completed_at = timezone.now()
+        ov_exec.execution_time_ms = int((time.time() - _ov_start) * 1000)
         ov_exec.save()
 
-        validation_status = "passed"
+        validation_status = "valid"
         if not out_valid:
             response_text = "I apologize, but I cannot provide that response due to safety guidelines. Please rephrase your question."
-            validation_status = "failed"
+            validation_status = "flagged"
         elif out_details.get("pii_masked"):
             response_text = out_details.get("masked_response", response_text)
-            validation_status = "passed_with_masking"
+            validation_status = "valid"
 
         # ---- 7. Save assistant message ----
+        # Ensure validation_status matches DB CHECK constraint: pending, valid, invalid, flagged
+        if validation_status not in ("pending", "valid", "invalid", "flagged"):
+            validation_status = "valid"
+
         assistant_msg = Message.objects.create(
             conversation=conversation,
             role="assistant",
@@ -1187,17 +1194,17 @@ class AgentOrchestrator:
             executions = AgentExecution.objects.filter(agent_type=agent_type)
             total = executions.count()
             successful = executions.filter(status="completed").count()
-            last_exec = executions.order_by("-started_at").first()
+            last_exec = executions.order_by("-created_at").first()
 
             avg_duration = None
             completed_execs = executions.filter(
-                status="completed", completed_at__isnull=False
+                status="completed", execution_time_ms__isnull=False
             )
             if completed_execs.exists():
                 durations = []
                 for ex in completed_execs[:100]:
-                    if ex.duration_ms is not None:
-                        durations.append(ex.duration_ms)
+                    if ex.execution_time_ms is not None:
+                        durations.append(ex.execution_time_ms)
                 if durations:
                     avg_duration = sum(durations) / len(durations)
 
@@ -1205,7 +1212,7 @@ class AgentOrchestrator:
                 {
                     "agent_name": agent_type,
                     "status": "healthy" if total == 0 or (successful / total > 0.8) else "degraded",
-                    "last_execution": last_exec.started_at if last_exec else None,
+                    "last_execution": last_exec.created_at if last_exec else None,
                     "total_executions": total,
                     "success_rate": round(successful / total, 4) if total > 0 else 1.0,
                     "average_duration_ms": round(avg_duration, 2) if avg_duration else None,

@@ -103,23 +103,19 @@ class ChatResponseSerializer(serializers.Serializer):
 class AgentExecutionSerializer(serializers.ModelSerializer):
     """Serializer for AgentExecution model."""
 
-    duration_ms = serializers.ReadOnlyField()
-
     class Meta:
         model = AgentExecution
         fields = [
             "id",
             "agent_type",
+            "conversation",
             "input_data",
             "output_data",
             "status",
-            "started_at",
-            "completed_at",
-            "error_message",
-            "metadata",
-            "duration_ms",
+            "execution_time_ms",
+            "created_at",
         ]
-        read_only_fields = ["id", "started_at"]
+        read_only_fields = ["id", "created_at"]
 
 
 class AgentHealthSerializer(serializers.Serializer):
