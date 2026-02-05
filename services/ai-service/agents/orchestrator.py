@@ -978,25 +978,38 @@ class AgentOrchestrator:
         # ---- 1. Ensure / create conversation ----
         from .models import Conversation, Message, AgentExecution
 
-        if conversation_id:
-            try:
-                conversation = Conversation.objects.get(id=conversation_id)
-            except Conversation.DoesNotExist:
+        # Check if user_id is a valid UUID (required by the conversations table)
+        is_anonymous = True
+        try:
+            uuid.UUID(str(user_id))
+            is_anonymous = False
+        except (ValueError, AttributeError):
+            is_anonymous = True
+
+        conversation = None
+        user_msg = None
+        conversation_history = []
+
+        if not is_anonymous:
+            if conversation_id:
+                try:
+                    conversation = Conversation.objects.get(id=conversation_id)
+                except Conversation.DoesNotExist:
+                    conversation = Conversation.objects.create(user_id=user_id, title=user_message[:100])
+            else:
                 conversation = Conversation.objects.create(user_id=user_id, title=user_message[:100])
-        else:
-            conversation = Conversation.objects.create(user_id=user_id, title=user_message[:100])
 
-        # Save user message
-        user_msg = Message.objects.create(
-            conversation=conversation,
-            role="user",
-            content=user_message,
-        )
+            # Save user message
+            user_msg = Message.objects.create(
+                conversation=conversation,
+                role="user",
+                content=user_message,
+            )
 
-        # Build conversation history for context
-        conversation_history = list(
-            conversation.messages.order_by("created_at").values("role", "content")[:20]
-        )
+            # Build conversation history for context
+            conversation_history = list(
+                conversation.messages.order_by("created_at").values("role", "content")[:20]
+            )
 
         # ---- 2. Input Validation ----
         _iv_start = time.time()
@@ -1013,13 +1026,15 @@ class AgentOrchestrator:
 
         if not is_valid:
             # Save assistant response for blocked message
-            assistant_msg = Message.objects.create(
-                conversation=conversation,
-                role="assistant",
-                content=validation_msg,
-                validation_status="flagged",
-                metadata={"validation_details": validation_details},
-            )
+            assistant_msg = None
+            if conversation:
+                assistant_msg = Message.objects.create(
+                    conversation=conversation,
+                    role="assistant",
+                    content=validation_msg,
+                    validation_status="flagged",
+                    metadata={"validation_details": validation_details},
+                )
             return self._build_response(
                 conversation=conversation,
                 message=assistant_msg,
@@ -1043,13 +1058,15 @@ class AgentOrchestrator:
         if sentiment_result.get("escalation_recommended"):
             escalation_response = self.sentiment_agent.execute(user_message, conversation_history)
             if escalation_response.get("response"):
-                assistant_msg = Message.objects.create(
-                    conversation=conversation,
-                    role="assistant",
-                    content=escalation_response["response"],
-                    validation_status="valid",
-                    metadata={"sentiment": sentiment_result},
-                )
+                assistant_msg = None
+                if conversation:
+                    assistant_msg = Message.objects.create(
+                        conversation=conversation,
+                        role="assistant",
+                        content=escalation_response["response"],
+                        validation_status="valid",
+                        metadata={"sentiment": sentiment_result},
+                    )
                 return self._build_response(
                     conversation=conversation,
                     message=assistant_msg,
@@ -1138,19 +1155,21 @@ class AgentOrchestrator:
         if validation_status not in ("pending", "valid", "invalid", "flagged"):
             validation_status = "valid"
 
-        assistant_msg = Message.objects.create(
-            conversation=conversation,
-            role="assistant",
-            content=response_text,
-            validation_status=validation_status,
-            tool_calls=tool_calls,
-            metadata={
-                "intent": intent,
-                "agent_type": agent_type_label,
-                "sentiment": sentiment_result,
-                "output_validation": out_details,
-            },
-        )
+        assistant_msg = None
+        if conversation:
+            assistant_msg = Message.objects.create(
+                conversation=conversation,
+                role="assistant",
+                content=response_text,
+                validation_status=validation_status,
+                tool_calls=tool_calls,
+                metadata={
+                    "intent": intent,
+                    "agent_type": agent_type_label,
+                    "sentiment": sentiment_result,
+                    "output_validation": out_details,
+                },
+            )
 
         return self._build_response(
             conversation=conversation,
@@ -1282,8 +1301,8 @@ class AgentOrchestrator:
             meta.update(extra_metadata)
 
         return {
-            "conversation_id": str(conversation.id),
-            "message_id": str(message.id),
+            "conversation_id": str(conversation.id) if conversation else str(uuid.uuid4()),
+            "message_id": str(message.id) if message else str(uuid.uuid4()),
             "response": response_text,
             "agent_type": agent_type,
             "intent": intent,
