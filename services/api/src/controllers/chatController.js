@@ -128,7 +128,7 @@ const handleMessage = async ({ message, conversationId, userId, user }) => {
     const aiResponse = await aiService.sendMessage(
       message,
       conversation ? conversation.id : null,
-      userId,
+      userId || 'anonymous',
       userContext
     );
 

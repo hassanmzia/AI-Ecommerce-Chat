@@ -83,7 +83,7 @@ class ChatRequestSerializer(serializers.Serializer):
 
     message = serializers.CharField(max_length=4096)
     conversation_id = serializers.UUIDField(required=False, allow_null=True)
-    user_id = serializers.CharField(max_length=255, default="anonymous")
+    user_id = serializers.CharField(max_length=255, default="anonymous", allow_null=True)
     metadata = serializers.JSONField(required=False, default=dict)
 
 
