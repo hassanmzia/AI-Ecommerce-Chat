@@ -134,17 +134,26 @@ class OutputValidator:
             logger.warning("PII masking error: %s", exc)
             return text
 
+    @staticmethod
+    def _sanitize_scores(obj):
+        """Convert numpy types to native Python types for JSON serialization."""
+        import json
+
+        return json.loads(json.dumps(obj, default=lambda x: bool(x) if hasattr(x, 'item') and isinstance(x.item(), bool) else float(x) if hasattr(x, 'item') else str(x)))
+
     def _log(self, validation_type: str, input_text: str, is_valid: bool, message: str, scores: dict):
         """Create an audit log entry."""
         try:
             from .models import ValidationLog
 
+            safe_scores = self._sanitize_scores(scores) if scores else {}
+
             ValidationLog.objects.create(
                 validation_type=validation_type,
                 input_text=input_text[:2000],
-                is_valid=is_valid,
+                is_valid=bool(is_valid),
                 message=message,
-                scores=scores,
+                scores=safe_scores,
             )
         except Exception as exc:
             logger.warning("Failed to create validation log: %s", exc)
