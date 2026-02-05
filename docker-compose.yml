@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   # =============================================================
-  # PostgreSQL Database (non-default port 5499)
+  # PostgreSQL Database (internal port 5499, no host binding)
   # =============================================================
   postgres:
     image: postgres:16-alpine
@@ -12,8 +12,8 @@ services:
       POSTGRES_USER: ecommerce_user
       POSTGRES_PASSWORD: ecommerce_secure_pass_2024
       PGPORT: "5499"
-    ports:
-      - "5499:5499"
+    expose:
+      - "5499"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./services/api/src/config/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -27,14 +27,14 @@ services:
     restart: unless-stopped
 
   # =============================================================
-  # Redis Cache (non-default port 6399)
+  # Redis Cache (internal port 6399, no host binding)
   # =============================================================
   redis:
     image: redis:7-alpine
     container_name: ecommerce_redis
     command: redis-server --port 6399 --requirepass redis_secure_pass_2024
-    ports:
-      - "6399:6399"
+    expose:
+      - "6399"
     volumes:
       - redis_data:/data
     healthcheck:
