@@ -48,17 +48,26 @@ router.post(
 
 // -------------------------------------------------------
 // GET /api/chat/conversations
-// List user's conversations
+// List user's conversations (auth required) or return empty for guests
 // -------------------------------------------------------
 router.get(
   '/conversations',
-  verifyToken,
+  optionalAuth,
   [
     check('page').optional().isInt({ min: 1 }).toInt(),
     check('limit').optional().isInt({ min: 1, max: 50 }).toInt(),
   ],
   async (req, res, next) => {
     try {
+      // Guest users get an empty conversation list
+      if (!req.user) {
+        return res.json({
+          success: true,
+          data: [],
+          pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+        });
+      }
+
       const page = parseInt(req.query.page, 10) || 1;
       const limit = parseInt(req.query.limit, 10) || 20;
       const offset = (page - 1) * limit;
@@ -102,7 +111,7 @@ router.get(
 // -------------------------------------------------------
 router.get(
   '/conversations/:id',
-  verifyToken,
+  optionalAuth,
   [
     param('id').isUUID().withMessage('Valid conversation ID is required'),
     check('page').optional().isInt({ min: 1 }).toInt(),
@@ -114,6 +123,18 @@ router.get(
       const page = parseInt(req.query.page, 10) || 1;
       const limit = parseInt(req.query.limit, 10) || 50;
       const offset = (page - 1) * limit;
+
+      // Guest users have transient conversations – return empty
+      if (!req.user) {
+        return res.json({
+          success: true,
+          data: {
+            conversation: { id, title: 'Guest Conversation', is_active: true },
+            messages: [],
+          },
+          pagination: { page: 1, limit: 50, total: 0, totalPages: 0 },
+        });
+      }
 
       // Verify conversation ownership
       const convResult = await db.query(
@@ -192,11 +213,12 @@ router.delete(
 
 // -------------------------------------------------------
 // POST /api/chat/conversations
-// Start a new conversation
+// Start a new conversation (authenticated users get DB persistence,
+// guests get a transient in-memory conversation id)
 // -------------------------------------------------------
 router.post(
   '/conversations',
-  verifyToken,
+  optionalAuth,
   [
     body('title').optional().trim().isLength({ max: 255 }),
     body('metadata').optional().isObject(),
@@ -204,6 +226,23 @@ router.post(
   async (req, res, next) => {
     try {
       const { title, metadata } = req.body;
+
+      // Guest user – return a transient conversation id (not persisted)
+      if (!req.user) {
+        const { v4: uuidv4 } = require('uuid');
+        return res.status(201).json({
+          success: true,
+          data: {
+            id: uuidv4(),
+            user_id: null,
+            title: title || 'Guest Conversation',
+            is_active: true,
+            metadata: metadata || { guest: true },
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        });
+      }
 
       const result = await db.query(
         `INSERT INTO conversations (user_id, title, metadata)
