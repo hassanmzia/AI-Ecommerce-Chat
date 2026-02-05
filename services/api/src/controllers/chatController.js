@@ -37,14 +37,20 @@ const handleMessage = async ({ message, conversationId, userId, user }) => {
       );
 
       if (convResult.rows.length === 0) {
-        throw Object.assign(new Error('Conversation not found'), { statusCode: 404 });
-      }
+        // Guest users have transient conversation IDs not stored in DB
+        // Treat as anonymous — skip DB storage but still process via AI
+        if (!userId) {
+          conversation = null;
+        } else {
+          throw Object.assign(new Error('Conversation not found'), { statusCode: 404 });
+        }
+      } else {
+        conversation = convResult.rows[0];
 
-      conversation = convResult.rows[0];
-
-      // Verify ownership if user is authenticated
-      if (userId && conversation.user_id !== userId) {
-        throw Object.assign(new Error('Access denied to this conversation'), { statusCode: 403 });
+        // Verify ownership if user is authenticated
+        if (userId && conversation.user_id !== userId) {
+          throw Object.assign(new Error('Access denied to this conversation'), { statusCode: 403 });
+        }
       }
     } else if (userId) {
       // Create a new conversation for the authenticated user
