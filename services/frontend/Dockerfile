@@ -15,8 +15,8 @@ ENV VITE_AI_SERVICE_URL=$VITE_AI_SERVICE_URL
 ENV VITE_MCP_URL=$VITE_MCP_URL
 ENV VITE_A2A_URL=$VITE_A2A_URL
 
-COPY package.json package-lock.json* ./
-RUN npm ci --ignore-scripts
+COPY package*.json ./
+RUN npm install --ignore-scripts && npm cache clean --force
 
 COPY . .
 RUN npm run build
