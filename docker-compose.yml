@@ -27,18 +27,18 @@ services:
     restart: unless-stopped
 
   # =============================================================
-  # Redis Cache (non-default port 6380)
+  # Redis Cache (non-default port 6399)
   # =============================================================
   redis:
     image: redis:7-alpine
     container_name: ecommerce_redis
-    command: redis-server --port 6380 --requirepass redis_secure_pass_2024
+    command: redis-server --port 6399 --requirepass redis_secure_pass_2024
     ports:
-      - "6380:6380"
+      - "6399:6399"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-p", "6380", "-a", "redis_secure_pass_2024", "ping"]
+      test: ["CMD", "redis-cli", "-p", "6399", "-a", "redis_secure_pass_2024", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -57,7 +57,7 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings
       - DATABASE_URL=postgresql://ecommerce_user:ecommerce_secure_pass_2024@postgres:5499/ecommerce_chat
-      - REDIS_URL=redis://:redis_secure_pass_2024@redis:6380/1
+      - REDIS_URL=redis://:redis_secure_pass_2024@redis:6399/1
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
       - AI_SERVICE_PORT=3067
@@ -92,7 +92,7 @@ services:
       - NODE_ENV=production
       - PORT=3066
       - DATABASE_URL=postgresql://ecommerce_user:ecommerce_secure_pass_2024@postgres:5499/ecommerce_chat
-      - REDIS_URL=redis://:redis_secure_pass_2024@redis:6380/0
+      - REDIS_URL=redis://:redis_secure_pass_2024@redis:6399/0
       - JWT_SECRET=${JWT_SECRET:-ecommerce_jwt_secret_key_2024_production}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-ecommerce_jwt_refresh_secret_2024}
       - AI_SERVICE_URL=http://ai-service:3067
@@ -127,7 +127,7 @@ services:
       - NODE_ENV=production
       - PORT=3068
       - DATABASE_URL=postgresql://ecommerce_user:ecommerce_secure_pass_2024@postgres:5499/ecommerce_chat
-      - REDIS_URL=redis://:redis_secure_pass_2024@redis:6380/2
+      - REDIS_URL=redis://:redis_secure_pass_2024@redis:6399/2
       - AI_SERVICE_URL=http://ai-service:3067
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
@@ -157,7 +157,7 @@ services:
       - NODE_ENV=production
       - PORT=3069
       - DATABASE_URL=postgresql://ecommerce_user:ecommerce_secure_pass_2024@postgres:5499/ecommerce_chat
-      - REDIS_URL=redis://:redis_secure_pass_2024@redis:6380/3
+      - REDIS_URL=redis://:redis_secure_pass_2024@redis:6399/3
       - AI_SERVICE_URL=http://ai-service:3067
       - MCP_SERVER_URL=http://mcp-server:3068
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}

@@ -98,7 +98,7 @@ DATABASES = {
 # Cache (Redis)
 # ---------------------------------------------------------------------------
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6380/0")
+REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6399/0")
 
 CACHES = {
     "default": {
@@ -119,7 +119,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [os.environ.get("REDIS_URL", "redis://redis:6380/0")],
+            "hosts": [os.environ.get("REDIS_URL", "redis://redis:6399/0")],
         },
     },
 }
